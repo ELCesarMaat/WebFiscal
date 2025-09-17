@@ -1,6 +1,6 @@
 <?php
 // Conexión a la base de datos
-$conexion = new mysqli("localhost", "root", "", "webfiscal");
+$conexion = new mysqli("localhost", "cesarmaatu908748408_cesarmaat", ":w;u!dq0O@l", "webfiscal");
 if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
