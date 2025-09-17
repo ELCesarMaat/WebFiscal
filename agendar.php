@@ -70,12 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Conectar y obtener lista de servicios para el select (Id + Titulo + Image)
-$conexion = new mysqli("localhost", "root", "", "webfiscal");
+$config = require __DIR__ . '/config.php';
+$dbconf = $config['db'];
+$conexion = new mysqli($dbconf['host'], $dbconf['user'], $dbconf['pass'], $dbconf['name']);
 if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
 $servicios = [];
-$res = $conexion->query("SELECT Id, Titulo, Image FROM Servicios WHERE Activo = 1 ORDER BY Titulo");
+$res = $conexion->query("SELECT Id, Titulo, Image FROM servicios WHERE Activo = 1 ORDER BY Titulo");
 if ($res) {
   while($r = $res->fetch_assoc()) $servicios[] = $r;
   $res->free();

@@ -7,7 +7,7 @@ if ($conexion->connect_error) {
 }
 
 // Consulta para obtener los servicios, incluyendo la imagen y el Id
-$sql = "SELECT Id, Titulo, Descripcion, Image FROM Servicios WHERE Activo = 1";
+$sql = "SELECT Id, Titulo, Descripcion, Image FROM servicios WHERE Activo = 1";
 $resultado = $conexion->query($sql);
 ?>
 <!DOCTYPE html>
