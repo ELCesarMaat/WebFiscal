@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Conectar y obtener lista de servicios para el select (Id + Titulo + Image)
-$conexion = new mysqli("localhost", "root", "", "webfiscal");
+$conexion = new mysqli("localhost", "cesarmaat", ":w;u!dq0O@l", "webfiscal");
 if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
