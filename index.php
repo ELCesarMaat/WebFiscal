@@ -1,6 +1,7 @@
 <?php
-// Conexión a la base de datos
-$conexion = new mysqli("localhost", "cesarmaatu908748408_cesarmaat", ":w;u!dq0O@l", "webfiscal");
+$config = require __DIR__ . '/config.php';
+$dbconf = $config['db'];
+$conexion = new mysqli($dbconf['host'], $dbconf['user'], $dbconf['pass'], $dbconf['name']);
 if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }

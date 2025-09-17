@@ -1,4 +1,8 @@
 <?php
+$config = require __DIR__ . '/config.php';
+$ownerEmail = $config['owner_email'];
+// usar $ownerEmail al enviar notificaciones
+
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
 $errors = [];
 $success = false;
@@ -31,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $stmt->close();
     }
 
-    $ownerEmail = 'contacto@medlex.mx'; // cambia si corresponde a otro correo responsable
     $site = $_SERVER['HTTP_HOST'] ?? 'MEDLEX';
 
     $subject = "Nueva solicitud de cita - MEDLEX: " . $serviceTitle;
@@ -67,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Conectar y obtener lista de servicios para el select (Id + Titulo + Image)
-$conexion = new mysqli("localhost", "u908748408_cesarmaat	", ":w;u!dq0O@l", "webfiscal");
+$conexion = new mysqli("localhost", "root", "", "webfiscal");
 if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
