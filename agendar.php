@@ -1,6 +1,17 @@
 <?php
 $config = require __DIR__ . '/config.php';
-$ownerEmail = $config['owner_email'];
+$ownerEmail = $config['owner_email'] ?? 'contacto@medlex.mx';
+
+// Conexión usando credenciales desde config.php (debe existir antes de usar $conexion)
+$dbconf = $config['db'] ?? null;
+if (!$dbconf) {
+  die('Configuración de base de datos no encontrada en config.php');
+}
+$conexion = new mysqli($dbconf['host'], $dbconf['user'], $dbconf['pass'], $dbconf['name']);
+if ($conexion->connect_error) {
+  die("Error de conexión: " . $conexion->connect_error);
+}
+
 // usar $ownerEmail al enviar notificaciones
 
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
