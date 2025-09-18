@@ -177,6 +177,19 @@ main {
   align-items: center;
 }
 
+/* Evitar que la tarjeta empalme con la línea: espaciado y control de z-index */
+.servicios { 
+  /* separa visualmente la sección del separador siguiente */
+  padding-bottom: 48px; 
+  position: relative;
+}
+
+/* Si las tarjetas usan posicionamiento, asegurarlas debajo de la línea */
+.servicio-card {
+  position: relative;
+  z-index: 1; /* baja prioridad de apilamiento */
+}
+
 .servicios h2,
 .section-title {
   color: var(--color-azul-oscuro);
@@ -374,7 +387,72 @@ section:not(:last-child) {
   margin-top: 48px;
 }
 
-/* Vista móvil y responsiva */
+/* Sección Preguntas frecuentes */
+.preguntas {
+  padding: 56px 20px;
+  background: linear-gradient(180deg, rgba(250,250,251,0.98), rgba(246,247,249,0.98));
+  color: var(--color-azul-oscuro);
+}
+.preguntas .container { max-width:1200px; margin:auto; position: relative; }
+
+/* Carrusel horizontal: tarjetas grandes que ocupan todo el ancho */
+.preguntas .container { max-width: 1200px; margin: auto; position: relative; }
+
+/* convertimos la grid en un slider horizontal */
+.preguntas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  padding: 18px 8px;
+  align-items: stretch;
+  overflow: visible;           /* permitir ver todas sin scroll interno */
+  scroll-snap-type: none;      /* desactivar snap si existía */
+}
+
+/* Tarjeta más compacta */
+.pregunta-card {
+  flex: none;
+  scroll-snap-align: none;
+  min-height: 220px;           /* menos altura */
+  padding: 20px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--color-acento), var(--color-azul-medio));
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(49,66,90,0.12);
+  transition: transform .16s ease, box-shadow .16s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Tipografía adaptada: título y texto más pequeños para caber más tarjetas */
+.pregunta-num { font-size: 0.95rem; margin-bottom: 8px; color: rgba(255,255,255,0.9); }
+.pregunta-titulo { font-size: 1.1rem; line-height:1.15; margin: 0 0 8px 0; font-weight:800; color:#fff; text-shadow: 0 4px 10px rgba(0,0,0,0.28); }
+.pregunta-respuesta { font-size: 0.95rem; line-height:1.4; color: rgba(255,255,255,0.92); max-height: none; opacity:1; transform:none; }
+
+/* Estado hover/open con ligero lift */
+.pregunta-card:hover,
+.pregunta-card.open { transform: translateY(-6px); box-shadow: 0 18px 46px rgba(49,66,90,0.16); }
+
+/* Ocultar controles del carrusel si siguen cargándose (evita solapamientos visuales) */
+.preguntas .carousel-btn { display: none !important; }
+.preguntas .carousel-dots { display: none !important; }
+
+/* Responsive: reducir padding y tamaño en móviles */
+@media (max-width:1100px) {
+  .preguntas-grid { gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .pregunta-card { min-height: 200px; padding: 16px; }
+  .pregunta-titulo { font-size: 1rem; }
+  .pregunta-respuesta { font-size: 0.95rem; }
+}
+@media (max-width:600px) {
+  .preguntas-grid { gap: 12px; grid-template-columns: 1fr; }
+  .pregunta-card { min-height: auto; padding: 14px; }
+  .pregunta-titulo { font-size: 0.98rem; }
+  .pregunta-respuesta { font-size: 0.92rem; }
+}
+
 @media (max-width: 768px) {
   .header-container,
   .hero-content,
@@ -430,3 +508,47 @@ section:not(:last-child) {
 @media (min-width: 1200px) {
   .logo-full { max-width: 500px; }
 }
+
+/* Fix: evitar overflow horizontal por tarjetas de servicios en móviles */
+html, body { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+
+/* Asegurar que el contenedor respete su padding sin desbordar */
+.servicios {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* limitar el ancho efectivo de la lista y evitar scroll inesperado */
+.servicios-lista {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+  overflow-x: hidden; /* evita pequeños desbordes visibles */
+}
+
+/* tarjetas: permitir que encajen y reducir min-width en pantallas pequeñas */
+.servicio-card {
+  min-width: 260px;               /* menos estricto para móviles */
+  max-width: calc(100% - 32px);   /* evita que una tarjeta supere el ancho disponible */
+  padding: 28px 36px;             /* reducir si es necesario */
+}
+
+/* en pantallas muy estrechas, hacer que las tarjetas ocupen casi todo el ancho */
+@media (max-width: 820px) {
+  .servicios-lista {
+    gap: 18px;
+    justify-content: center;
+  }
+  .servicio-card {
+    min-width: calc(90vw - 32px) !important;
+    max-width: calc(90vw - 32px) !important;
+    padding: 20px 18px !important;
+  }
+}
+
+/* como última medida, ocultar overflow horizontal en html si algo sigue provocándolo */
+html, body { overflow-x: hidden; }

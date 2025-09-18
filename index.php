@@ -7,8 +7,8 @@ if ($conexion->connect_error) {
 }
 
 // Consulta para obtener los servicios, incluyendo la imagen y el Id
-$sql = "SELECT Id, Titulo, Descripcion, Image FROM servicios WHERE Activo = 1";
-$resultado = $conexion->query($sql);
+$sql = "SELECT Id, Titulo, Descripcion, Image FROM servicios WHERE Activo = 1 ORDER BY Orden ASC, Titulo ASC";
+$res = $conexion->query($sql);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -56,7 +56,7 @@ $resultado = $conexion->query($sql);
     <section id="servicios" class="servicios">
       <h2 class="section-title">Servicios</h2>
       <div class="servicios-lista">
-        <?php while($servicio = $resultado->fetch_assoc()):
+        <?php while($servicio = $res->fetch_assoc()):
           $serviceUrl = 'agendar.php?servicio_id=' . urlencode($servicio['Id']);
         ?>
           <div class="servicio-card" style="background-image: url('img/<?php echo htmlspecialchars($servicio['Image']); ?>');">
@@ -69,6 +69,60 @@ $resultado = $conexion->query($sql);
         <?php endwhile; ?>
       </div>
     </section>
+
+    <!-- Preguntas frecuentes -->
+    <section id="preguntas" class="preguntas">
+      <div class="container">
+        <h2 class="section-title">Preguntas frecuentes</h2>
+        <p class="lead">Respuestas rápidas a dudas comunes sobre nuestros servicios legales y fiscales.</p>
+
+        <div class="preguntas-grid">
+          <article class="pregunta-card" tabindex="0">
+            <div class="pregunta-num">01</div>
+            <h3 class="pregunta-titulo">¿Cómo empiezo como persona física o persona moral?</h3>
+            <div class="pregunta-respuesta">
+              Para iniciar debes definir tu régimen fiscal, obtener RFC y llevar contabilidad básica. Podemos asesorarte para elegir el régimen adecuado y registrar tu actividad ante el SAT.
+            </div>
+          </article>
+
+          <article class="pregunta-card" tabindex="0">
+            <div class="pregunta-num">02</div>
+            <h3 class="pregunta-titulo">¿Qué documentos se necesitan para trámites fiscales?</h3>
+            <div class="pregunta-respuesta">
+              Identificación oficial, comprobante de domicilio, RFC, y documentos relacionados con tu actividad (contratos, facturas). Podemos revisar tu caso y preparar la lista exacta.
+            </div>
+          </article>
+
+          <article class="pregunta-card" tabindex="0">
+            <div class="pregunta-num">03</div>
+            <h3 class="pregunta-titulo">¿Qué opciones tengo en caso de despido?</h3>
+            <div class="pregunta-respuesta">
+              Revisamos tu contrato y el motivo del despido: posible indemnización, finiquito, reinstalación o demanda laboral. Agenda una consulta para evaluación y acciones.
+            </div>
+          </article>
+
+          <article class="pregunta-card" tabindex="0">
+            <div class="pregunta-num">04</div>
+            <h3 class="pregunta-titulo">¿Cómo procedo en un divorcio o asuntos familiares?</h3>
+            <div class="pregunta-respuesta">
+              Existen opciones de divorcio voluntario o contencioso, acuerdos de custodia y pensión. Evaluamos tu situación y proponemos la estrategia más conveniente.
+            </div>
+          </article>
+          
+        </div> <!-- .preguntas-grid -->
+
+        <!-- CTA final en Preguntas: contacto / agendar -->
+        <div class="preguntas-contacto" style="text-align:center; margin-top:28px;">
+          <p style="font-size:1rem; color:var(--color-azul-oscuro); margin-bottom:12px;">
+            ¿Tienes alguna otra duda o necesitas asesoría personalizada? Ponte en contacto con nosotros y agenda una cita.
+          </p>
+          <a href="agendar.php" class="btn btn-orange" style="padding:12px 22px; border-radius:999px; font-weight:700;">
+            Contactar / Agendar cita →
+          </a>
+        </div>
+
+      </div>
+    </section>
     <!-- Puedes agregar más secciones aquí siguiendo el mismo formato -->
   </main>
   <footer>
@@ -78,6 +132,7 @@ $resultado = $conexion->query($sql);
   </footer>
   
   <script src="js/script.js"></script>
+  <script src="js/preguntas-carousel.js"></script>
 </body>
 </html>
 <?php
