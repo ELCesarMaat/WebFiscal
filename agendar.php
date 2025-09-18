@@ -102,8 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
       $recipients = [
-        $ownerEmail,
-        'maatcesar@gmail.com'
+        $ownerEmail
       ];
       $to = implode(',', array_map(function($e){ return _safe_email($e); }, $recipients));
       @mail($to, $subject, $body, $headers);
