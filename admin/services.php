@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-// obtener lista
-$res = $mysqli->query("SELECT Id, Titulo, Descripcion, Image, Activo FROM Servicios ORDER BY Id DESC");
+// obtener lista (incluir columna Orden y ordenar por Orden)
+$res = $mysqli->query("SELECT Id, Titulo, Descripcion, Image, Activo, Orden FROM servicios ORDER BY Orden ASC, Id DESC");
 $servicios = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 $csrf = $_SESSION['csrf_token'];
 ?>

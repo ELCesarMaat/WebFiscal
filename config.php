@@ -7,10 +7,10 @@ if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
 
 return [
   'db' => [
-    'host' => 'mysql.hostinger.com',
-    'user' => 'u908748408_cesarmaat',
-    'pass' => 'Cesar2211333',
-    'name' => 'u908748408_webfiscal',
+    'host' => 'localhost',
+    'user' => 'root',
+    'pass' => '',
+    'name' => 'webfiscal',
   ],
   'owner_email' => 'contacto@medlex.mx',
 ];

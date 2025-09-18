@@ -1,8 +1,5 @@
 <?php
 $config = require __DIR__ . '/config.php';
-$ownerEmail = $config['owner_email'] ?? 'contacto@medlex.mx';
-
-// Conexión usando credenciales desde config.php (debe existir antes de usar $conexion)
 $dbconf = $config['db'] ?? null;
 if (!$dbconf) {
   die('Configuración de base de datos no encontrada en config.php');
@@ -12,7 +9,22 @@ if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
 
-// usar $ownerEmail al enviar notificaciones
+// --- obtener datos de la empresa desde la BD (si existe) ---
+$empresa = [];
+$res = $conexion->query("SELECT Nombre, Telefono, Email, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+if ($res) {
+  $empresa = $res->fetch_assoc();
+  $res->free();
+}
+// decodificar redes si vienen en JSON
+$empresa_redes = [];
+if (!empty($empresa['Redes'])) {
+  $tmp = json_decode($empresa['Redes'], true);
+  if (is_array($tmp)) $empresa_redes = $tmp;
+}
+
+// usar email de empresa como owner_email; si no existe usar config.php
+$ownerEmail = $empresa['Email'] ?? ($config['owner_email'] ?? 'coantacto@medlex.mx');
 
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
 $errors = [];
@@ -278,14 +290,23 @@ foreach ($servicios as $s) {
             <h3 style="margin:0 0 8px 0;">Contacto</h3>
             <p style="margin:0 0 12px 0; color:#334451;">
               <strong>Email:</strong><br>
-              <a href="mailto:contacto@medlex.mx">contacto@medlex.mx</a><br><br>
+              <a href="mailto:<?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?>"><?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?></a><br><br>
+
               <strong>Teléfono:</strong><br>
-              <a href="tel:+8118002182">833 123 4567</a><br><br>
+              <?php if (!empty($empresa['Telefono'])): ?>
+                <a href="tel:<?php echo htmlspecialchars($empresa['Telefono']); ?>"><?php echo htmlspecialchars($empresa['Telefono']); ?></a><br><br>
+              <?php else: ?>
+                <span>No disponible</span><br><br>
+              <?php endif; ?>
+
               <strong>Dirección:</strong><br>
-              Tampico, Tamaulipas, México
+              <?php echo nl2br(htmlspecialchars($empresa['Direccion'] ?? '')); ?>
             </p>
             <hr style="border:none; border-top:1px solid #f0f0f0; margin:12px 0;">
-            <p style="margin:0; font-size:0.95rem; color:#6b7a82;">Horario de atención:<br>Lun - Vie 09:00 - 18:00</p>
+            <p style="margin:0; font-size:0.95rem; color:#6b7a82;">
+              Horario de atención:<br><?php echo htmlspecialchars($empresa['Horario'] ?? ''); ?>
+              <?php if (!empty($empresa['HorarioDetalle'])): ?><br><small><?php echo htmlspecialchars($empresa['HorarioDetalle']); ?></small><?php endif; ?>
+            </p>
           </div>
         </aside>
       </div>
@@ -296,15 +317,16 @@ foreach ($servicios as $s) {
     <div class="footer-bg" style="padding:28px 0;">
       <div style="max-width:1100px; margin:auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div style="min-width:220px;">
-          <strong>MEDLEX Despacho Jurídico</strong><br>México
+          <strong><?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?></strong><br>
+          <?php echo nl2br(htmlspecialchars($empresa['Direccion'] ?? '')); ?>
         </div>
         <div style="text-align:center; min-width:220px;">
-          <img src="img/logofull.png" alt="MEDLEX" style="max-width:160px; width:100%; height:auto;">
+          <img src="img/<?php echo htmlspecialchars($empresa['Logo'] ?? 'logofull.png'); ?>" alt="Logo" style="max-width:160px; width:100%; height:auto;">
         </div>
         <div style="min-width:220px; text-align:right;">
           <strong>Contacto</strong><br>
-          contacto@medlex.mx<br>
-          833 123 4567
+          <a href="mailto:<?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?>"><?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?></a><br>
+          <?php if (!empty($empresa['Telefono'])): echo htmlspecialchars($empresa['Telefono']); endif; ?>
         </div>
       </div>
       <hr style="margin:18px auto 12px; max-width:1100px; border:none; border-top:1px solid #eee;">
@@ -361,6 +383,8 @@ foreach ($servicios as $s) {
     }
   </script>
 
+
+</html></body>
   <script src="js/script.js"></script>
 </body>
 </html>
