@@ -6,7 +6,7 @@ $mysqli = new mysqli($db['host'],$db['user'],$db['pass'],$db['name']);
 $err=''; $msg='';
 
 // cargar datos actuales
-$res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+$res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
 $empresa = $res && $res->num_rows ? $res->fetch_assoc() : [];
 // decodificar redes para uso en inputs
 $redes_actuales = [];
@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre = trim($_POST['Nombre'] ?? '');
     $telefono = trim($_POST['Telefono'] ?? '');
     $email = trim($_POST['Email'] ?? '');
+    $correo_admin = trim($_POST['CorreoAdministrador'] ?? '');
     $direccion = trim($_POST['Direccion'] ?? '');
     $horario = trim($_POST['Horario'] ?? '');
     $detalle = trim($_POST['HorarioDetalle'] ?? '');
@@ -63,11 +64,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($res2 && $res2->num_rows) {
       $row = $res2->fetch_assoc();
       if ($logoName) {
-        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=?, Logo=? WHERE Id=?");
-        $stmt->bind_param("ssssssssi", $nombre, $telefono, $email, $direccion, $horario, $detalle, $redes_json, $logoName, $row['Id']);
+        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=?, Logo=? WHERE Id=?");
+        // 9 strings + 1 int => 9 's' y 1 'i'
+        $stmt->bind_param("sssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $logoName, $row['Id']);
       } else {
-        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=? WHERE Id=?");
-        $stmt->bind_param("sssssssi", $nombre, $telefono, $email, $direccion, $horario, $detalle, $redes_json, $row['Id']);
+        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=? WHERE Id=?");
+        // 8 strings + 1 int => 8 's' y 1 'i'
+        $stmt->bind_param("ssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $row['Id']);
       }
     } else {
       // insertar nueva fila
@@ -88,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // recargar datos actuales después de guardar
-    $res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+    $res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
     $empresa = $res && $res->num_rows ? $res->fetch_assoc() : [];
     $redes_actuales = [];
     if (!empty($empresa['Redes'])) {
@@ -137,6 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <input name="Email" type="email" value="<?php echo htmlspecialchars($empresa['Email'] ?? ''); ?>">
         </div>
       </div>
+
+      <label>Correo administrador</label>
+      <input name="CorreoAdministrador" type="email" value="<?php echo htmlspecialchars($empresa['correo_administrador'] ?? ''); ?>">
 
       <label>Dirección</label>
       <textarea name="Direccion" rows="3"><?php echo htmlspecialchars($empresa['Direccion'] ?? ''); ?></textarea>

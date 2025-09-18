@@ -11,7 +11,7 @@ if ($conexion->connect_error) {
 
 // --- obtener datos de la empresa desde la BD (si existe) ---
 $empresa = [];
-$res = $conexion->query("SELECT Nombre, Telefono, Email, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+$res = $conexion->query("SELECT Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
 if ($res) {
   $empresa = $res->fetch_assoc();
   $res->free();
@@ -23,8 +23,8 @@ if (!empty($empresa['Redes'])) {
   if (is_array($tmp)) $empresa_redes = $tmp;
 }
 
-// usar email de empresa como owner_email; si no existe usar config.php
-$ownerEmail = $empresa['Email'] ?? ($config['owner_email'] ?? 'coantacto@medlex.mx');
+// usar correo de administrador si existe, si no usar email de empresa, si no usar config
+$ownerEmail = $empresa['correo_administrador'] ?? $empresa['Email'] ?? ($config['owner_email'] ?? 'contacto@medlex.mx');
 
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
 $errors = [];
