@@ -28,6 +28,7 @@ $ownerEmail = $empresa['correo_administrador'] ?? $empresa['Email'] ?? ($config[
 
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
 $errors = [];
+$emailWarnings = [];
 $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $nombre = trim($_POST['nombre'] ?? '');
@@ -95,20 +96,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $boundary = 'bndry_' . bin2hex(random_bytes(8));
           $headers  = "From: MEDLEX <{$fromAddress}>\r\n";
           if ($replyTo) $headers .= "Reply-To: {$replyTo}\r\n";
+            // Evitar que algunos filtros marquen como spam agregando organización mínima
+          $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
           $headers .= "MIME-Version: 1.0\r\n";
           $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
 
-          $message  = "--{$boundary}\r\n";
-          $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
-          $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-          $message .= $plainBody . "\r\n\r\n";
-          $message .= "--{$boundary}\r\n";
-          $message .= "Content-Type: text/html; charset=UTF-8\r\n";
-          $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-          $message .= $htmlBody . "\r\n\r\n";
-          $message .= "--{$boundary}--\r\n";
+          $messageParts = [];
+          $messageParts[] = "--{$boundary}\r\n".
+            "Content-Type: text/plain; charset=UTF-8\r\n".
+            "Content-Transfer-Encoding: 8bit\r\n\r\n".
+            $plainBody . "\r\n";
+          $messageParts[] = "--{$boundary}\r\n".
+            "Content-Type: text/html; charset=UTF-8\r\n".
+            "Content-Transfer-Encoding: 8bit\r\n\r\n".
+            $htmlBody . "\r\n";
+          $messageParts[] = "--{$boundary}--\r\n";
+          $message = implode('', $messageParts);
 
-          @mail($to, $subject, $message, $headers);
+          $result = mail($to, $subject, $message, $headers);
+          // Logging básico
+          $logLine = date('Y-m-d H:i:s') . "\tTO={$to}\tSUBJ=" . str_replace(["\r","\n"],' ',$subject) . "\tRESULT=" . ($result?'OK':'FAIL') . "\n";
+          @file_put_contents(__DIR__.'/email_log.txt', $logLine, FILE_APPEND);
+          return $result;
         }
       }
 
@@ -140,7 +149,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       // Enviar al administrador / propietario
       $fromAddress = 'no-reply@' . preg_replace('/^www\./','', $_SERVER['SERVER_NAME'] ?? 'medlex.mx');
-      send_multipart_email(_safe_email($ownerEmail), "Nueva solicitud de cita: {$serviceTitle}", $plainAdmin, $htmlAdmin, $fromAddress, _safe_email($email));
+      $adminSent = send_multipart_email(_safe_email($ownerEmail), "Nueva solicitud de cita: {$serviceTitle}", $plainAdmin, $htmlAdmin, $fromAddress, _safe_email($email));
+      if (!$adminSent) {
+        $emailWarnings[] = 'No se pudo enviar correo al administrador (revisar configuración de correo del servidor).';
+      }
 
       // Correo de confirmación al cliente
       if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -162,7 +174,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           .'<div class="footer">© '.date('Y').' '.htmlspecialchars($empresaNombre).'. Todos los derechos reservados.</div>'
           .'</div></body></html>';
 
-        send_multipart_email(_safe_email($email), 'Confirmación de solicitud de cita', $plainUser, $htmlUser, $fromAddress, _safe_email($ownerEmail));
+        $userSent = send_multipart_email(_safe_email($email), 'Confirmación de solicitud de cita', $plainUser, $htmlUser, $fromAddress, _safe_email($ownerEmail));
+        if (!$userSent) {
+          $emailWarnings[] = 'La confirmación no pudo enviarse a su correo (guarde el ID de la cita).';
+        }
       }
 
       $success = true;
@@ -300,6 +315,12 @@ foreach ($servicios as $s) {
             <div class="notice success" style="margin-top:16px; padding:12px; background:#e6f7ea; color:#145a2a; border-radius:8px;">
               Gracias, su solicitud ha sido recibida. Le contactaremos pronto.
             </div>
+            <?php if (!empty($emailWarnings)): ?>
+              <div class="notice warning" style="margin-top:12px; padding:12px; background:#fff8e1; color:#8a6d00; border-radius:8px;">
+                <?php echo implode('<br>', array_map('htmlspecialchars', $emailWarnings)); ?>
+                <br>Si está en entorno local (XAMPP) configure el envío SMTP o use una librería como PHPMailer.
+              </div>
+            <?php endif; ?>
           <?php else: ?>
             <?php if (!empty($errors)): ?>
               <div class="notice error" style="margin-top:16px; padding:12px; background:#fff1f0; color:#7a1a1a; border-radius:8px;">
