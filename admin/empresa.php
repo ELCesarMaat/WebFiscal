@@ -5,8 +5,8 @@ $db = $config['db'];
 $mysqli = new mysqli($db['host'],$db['user'],$db['pass'],$db['name']);
 $err=''; $msg='';
 
-// cargar datos actuales
-$res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+// cargar datos actuales (incluye logo_full)
+$res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo, logo_full FROM empresa WHERE Activo = 1 LIMIT 1");
 $empresa = $res && $res->num_rows ? $res->fetch_assoc() : [];
 // decodificar redes para uso en inputs
 $redes_actuales = [];
@@ -39,13 +39,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // manejar logo: si se sube, guardar con nombre fijo logo.<ext>; si no, mantener actual
     $logoName = null;
+    $logoFullName = null;
+
+    // manejar logo corto (campo "Logo")
     if (!empty($_FILES['Logo']['name']) && is_uploaded_file($_FILES['Logo']['tmp_name'])) {
       $tmp = $_FILES['Logo']['tmp_name'];
       // obtener y normalizar extensión
       $ext = strtolower(pathinfo($_FILES['Logo']['name'], PATHINFO_EXTENSION));
       $allowed = ['png','jpg','jpeg','svg','gif','webp'];
       if (!in_array($ext, $allowed, true)) {
-        $err = $err ?: 'Formato de imagen no permitido. Use: ' . implode(', ', $allowed);
+        $err = $err ?: 'Formato de imagen no permitido para Logo. Use: ' . implode(', ', $allowed);
       } else {
         // nombre fijo: logo.<ext>
         $logoName = 'logo.' . $ext;
@@ -59,24 +62,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
+    // manejar logo full (campo "LogoFull")
+    if (!empty($_FILES['LogoFull']['name']) && is_uploaded_file($_FILES['LogoFull']['tmp_name'])) {
+      $tmp2 = $_FILES['LogoFull']['tmp_name'];
+      $ext2 = strtolower(pathinfo($_FILES['LogoFull']['name'], PATHINFO_EXTENSION));
+      $allowed2 = ['png','jpg','jpeg','svg','gif','webp'];
+      if (!in_array($ext2, $allowed2, true)) {
+        $err = $err ?: 'Formato de imagen no permitido para Logo full. Use: ' . implode(', ', $allowed2);
+      } else {
+        // nombre fijo: logo-full.<ext>
+        $logoFullName = 'logofull.' . $ext2;
+        $dest2 = __DIR__ . '/../img/' . $logoFullName;
+        if (!move_uploaded_file($tmp2, $dest2)) {
+          $err = $err ?: 'No se pudo subir el logo full (ver permisos en la carpeta img).';
+          $logoFullName = null;
+        } else {
+          @chmod($dest2, 0644);
+        }
+      }
+    }
+
     // upsert: si existe fila con Activo=1 actualiza, sino inserta
     $res2 = $mysqli->query("SELECT Id FROM empresa WHERE Activo = 1 LIMIT 1");
     if ($res2 && $res2->num_rows) {
       $row = $res2->fetch_assoc();
-      if ($logoName) {
+
+      // casos: ambos logos, solo logo, solo logo_full, ninguno
+      if ($logoName && $logoFullName) {
+        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=?, Logo=?, logo_full=? WHERE Id=?");
+        $stmt->bind_param("ssssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $logoName, $logoFullName, $row['Id']);
+      } elseif ($logoName && !$logoFullName) {
         $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=?, Logo=? WHERE Id=?");
-        // 9 strings + 1 int => 9 's' y 1 'i'
         $stmt->bind_param("sssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $logoName, $row['Id']);
+      } elseif (!$logoName && $logoFullName) {
+        $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=?, logo_full=? WHERE Id=?");
+        $stmt->bind_param("sssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $logoFullName, $row['Id']);
       } else {
         $stmt = $mysqli->prepare("UPDATE empresa SET Nombre=?, Telefono=?, Email=?, correo_administrador=?, Direccion=?, Horario=?, HorarioDetalle=?, Redes=? WHERE Id=?");
-        // 8 strings + 1 int => 8 's' y 1 'i'
         $stmt->bind_param("ssssssssi", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $row['Id']);
       }
+
     } else {
-      // insertar nueva fila
-      $stmt = $mysqli->prepare("INSERT INTO empresa (Nombre, Telefono, Email, Direccion, Horario, HorarioDetalle, Redes, Logo, Activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)");
+      // insertar nueva fila (incluye logo y logo_full)
+      $stmt = $mysqli->prepare("INSERT INTO empresa (Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo, logo_full, Activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
       $logo_to_insert = $logoName ?? ($empresa['Logo'] ?? null);
-      $stmt->bind_param("ssssssss", $nombre, $telefono, $email, $direccion, $horario, $detalle, $redes_json, $logo_to_insert);
+      $logo_full_to_insert = $logoFullName ?? ($empresa['logo_full'] ?? null);
+      $stmt->bind_param("ssssssssss", $nombre, $telefono, $email, $correo_admin, $direccion, $horario, $detalle, $redes_json, $logo_to_insert, $logo_full_to_insert);
     }
 
     if (isset($stmt) && $stmt) {
@@ -90,8 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $err = 'Error interno al preparar la consulta.';
     }
 
-    // recargar datos actuales después de guardar
-    $res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+    // recargar datos actuales después de guardar (incluye logo_full)
+    $res = $mysqli->query("SELECT Id, Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo, logo_full FROM empresa WHERE Activo = 1 LIMIT 1");
     $empresa = $res && $res->num_rows ? $res->fetch_assoc() : [];
     $redes_actuales = [];
     if (!empty($empresa['Redes'])) {
@@ -173,6 +204,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="../img/<?php echo htmlspecialchars($empresa['Logo']); ?>" alt="Logo" class="logo-preview">
       <?php endif; ?>
       <input type="file" name="Logo" accept="image/*">
+
+      <label>Logo full </label>
+      <?php if (!empty($empresa['logo_full'])): ?>
+        <img src="../img/<?php echo htmlspecialchars($empresa['logo_full']); ?>" alt="Logo Full" class="logo-preview">
+      <?php endif; ?>
+      <input type="file" name="LogoFull" accept="image/*">
 
       <div class="actions">
         <a class="btn" href="dashboard.php">← Volver</a>

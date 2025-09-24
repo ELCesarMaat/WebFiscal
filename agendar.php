@@ -11,7 +11,7 @@ if ($conexion->connect_error) {
 
 // --- obtener datos de la empresa desde la BD (si existe) ---
 $empresa = [];
-$res = $conexion->query("SELECT Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo FROM empresa WHERE Activo = 1 LIMIT 1");
+$res = $conexion->query("SELECT Nombre, Telefono, Email, correo_administrador, Direccion, Horario, HorarioDetalle, Redes, Logo, logo_full FROM empresa WHERE Activo = 1 LIMIT 1");
 if ($res) {
   $empresa = $res->fetch_assoc();
   $res->free();
@@ -82,38 +82,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($insertOk) {
-      // preparar y enviar correos (owner + admin)
+      // --- Preparar correos profesionales (multipart alternative) ---
       $site = $_SERVER['HTTP_HOST'] ?? 'MEDLEX';
+      $empresaNombre = $empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico';
+      $logoFullFile = $empresa['logo_full'] ?? ($empresa['Logo'] ?? 'logofull.png');
+      $logoFullUrl = (isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'https') . '://' . ($site) . '/img/' . rawurlencode($logoFullFile);
+      $fechaEnvio = date('Y-m-d H:i:s');
 
-      $subject = "Nueva solicitud de cita - MEDLEX: " . $serviceTitle;
-      $body  = "Nueva solicitud de cita recibida\n\n";
-      $body .= "Nombre: " . $nombre . "\n";
-      $body .= "Email: " . $email . "\n";
-      $body .= "Teléfono: " . $telefono . "\n";
-      $body .= "Servicio: " . $serviceTitle . " (ID: " . $servicioId . ")\n";
-      if ($fecha) $body .= "Fecha solicitada: " . $fecha . "\n\n";
-      $body .= "Mensaje:\n" . $mensaje . "\n\n";
-      $body .= "ID Cita: " . $citaId . "\n";
-      $body .= "Enviado desde: " . $site . " - " . date('Y-m-d H:i:s') . "\n";
+      // Función helper para enviar multipart (texto + HTML)
+      if (!function_exists('send_multipart_email')) {
+        function send_multipart_email($to, $subject, $plainBody, $htmlBody, $fromAddress, $replyTo = null) {
+          $boundary = 'bndry_' . bin2hex(random_bytes(8));
+          $headers  = "From: MEDLEX <{$fromAddress}>\r\n";
+          if ($replyTo) $headers .= "Reply-To: {$replyTo}\r\n";
+          $headers .= "MIME-Version: 1.0\r\n";
+          $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
 
+          $message  = "--{$boundary}\r\n";
+          $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+          $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+          $message .= $plainBody . "\r\n\r\n";
+          $message .= "--{$boundary}\r\n";
+          $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+          $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+          $message .= $htmlBody . "\r\n\r\n";
+          $message .= "--{$boundary}--\r\n";
+
+          @mail($to, $subject, $message, $headers);
+        }
+      }
+
+      // Datos comunes
+      $plainAdmin = "Nueva solicitud de cita\n\n".
+        "Nombre: {$nombre}\n".
+        "Correo: {$email}\n".
+        "Teléfono: {$telefono}\n".
+        "Servicio: {$serviceTitle} (ID: {$servicioId})\n".
+        ($fecha ? "Fecha solicitada: {$fecha}\n" : '').
+        ($mensaje ? "Mensaje: \n{$mensaje}\n\n" : "") .
+        "ID Cita: {$citaId}\nGenerado: {$fechaEnvio} ({$site})\n";
+
+      $htmlAdmin = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Nueva Cita</title>' .
+        '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;color:#2b3540;margin:0;padding:0} .card{background:#ffffff;margin:20px auto;padding:24px;max-width:640px;border-radius:14px;box-shadow:0 6px 18px rgba(20,30,40,.08)} h1{margin:0 0 18px;font-size:20px;color:#1e2730} .meta{margin:0 0 6px;font-size:14px} .label{font-weight:600;color:#45525b} .footer{margin-top:32px;font-size:12px;color:#6b7880;text-align:center} .logo{max-width:240px;margin:0 0 18px} .hl{background:#f0f4f7;padding:10px 14px;border-radius:8px;white-space:pre-line;font-size:14px}</style></head><body>' .
+        '<div class="card">'
+        .'<img class="logo" src="'.htmlspecialchars($logoFullUrl).'" alt="Logo">'
+        .'<h1>Nueva solicitud de cita</h1>'
+        .'<p class="meta"><span class="label">Fecha recepción:</span> '.htmlspecialchars($fechaEnvio).'</p>'
+        .'<p class="meta"><span class="label">ID Cita:</span> '.htmlspecialchars($citaId).'</p>'
+        .'<p class="meta"><span class="label">Nombre:</span> '.htmlspecialchars($nombre).'</p>'
+        .'<p class="meta"><span class="label">Correo:</span> '.htmlspecialchars($email).'</p>'
+        .'<p class="meta"><span class="label">Teléfono:</span> '.($telefono?htmlspecialchars($telefono):'<em>No proporcionado</em>').'</p>'
+        .'<p class="meta"><span class="label">Servicio:</span> '.htmlspecialchars($serviceTitle).' (ID '.htmlspecialchars($servicioId).')</p>'
+        .($fecha?'<p class="meta"><span class="label">Fecha solicitada:</span> '.htmlspecialchars($fecha).'</p>':'')
+        .($mensaje?'<div class="hl"><span class="label">Mensaje:</span>\n'.nl2br(htmlspecialchars($mensaje)).'</div>':'')
+        .'<div class="footer">Este correo es informativo. Por favor responda directamente para continuar la gestión.<br>© '.date('Y').' '.htmlspecialchars($empresaNombre).'.</div>'
+        .'</div></body></html>';
+
+      // Enviar al administrador / propietario
       $fromAddress = 'no-reply@' . preg_replace('/^www\./','', $_SERVER['SERVER_NAME'] ?? 'medlex.mx');
-      $headers  = "From: MEDLEX <" . $fromAddress . ">\r\n";
-      if ($email) $headers .= "Reply-To: " . _safe_email($email) . "\r\n";
-      $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+      send_multipart_email(_safe_email($ownerEmail), "Nueva solicitud de cita: {$serviceTitle}", $plainAdmin, $htmlAdmin, $fromAddress, _safe_email($email));
 
-      $recipients = [
-        $ownerEmail
-      ];
-      $to = implode(',', array_map(function($e){ return _safe_email($e); }, $recipients));
-      @mail($to, $subject, $body, $headers);
-
-      // confirmar al usuario
+      // Correo de confirmación al cliente
       if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $sub2 = "Confirmación: solicitud de cita en MEDLEX";
-        $msg2 = "Hola " . $nombre . ",\n\nHemos recibido su solicitud de cita para: " . $serviceTitle . "\n\nEn breve nos pondremos en contacto para confirmar la cita.\n\nMEDLEX Despacho Jurídico\nID de solicitud: " . $citaId;
-        $headers2 = "From: MEDLEX <" . $fromAddress . ">\r\n";
-        $headers2 .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        @mail(_safe_email($email), $sub2, $msg2, $headers2);
+        $plainUser = "Estimado(a) {$nombre},\n\nHemos recibido su solicitud de cita referente a: {$serviceTitle}.".
+          ($mensaje?"\n\nMensaje enviado:\n{$mensaje}\n":"\n").
+          "\nNuestro equipo revisará la información y se pondrá en contacto con usted a la brevedad.\n\n".
+          "Datos de referencia:\nID Cita: {$citaId}\nFecha: {$fechaEnvio}\n\nAtentamente,\n{$empresaNombre}";
+
+        $htmlUser = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Confirmación de solicitud</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;margin:0;padding:0;color:#243039} .card{background:#ffffff;margin:20px auto;padding:28px;max-width:640px;border-radius:16px;box-shadow:0 8px 26px rgba(20,30,40,.08)} h1{margin:0 0 14px;font-size:22px;color:#1d2730} p{font-size:15px;line-height:1.5;margin:0 0 14px} .logo{max-width:240px;margin:0 0 18px} .ref{background:#f0f4f7;padding:14px 16px;border-radius:10px;font-size:13px;line-height:1.4;white-space:pre-line} .footer{margin-top:28px;font-size:12px;color:#6b7880;text-align:center} .strong{font-weight:600}</style></head><body>'
+          .'<div class="card">'
+          .'<img class="logo" src="'.htmlspecialchars($logoFullUrl).'" alt="Logo">'
+          .'<h1>Confirmación de solicitud</h1>'
+          .'<p>Estimado(a) <span class="strong">'.htmlspecialchars($nombre).'</span>,</p>'
+          .'<p>Hemos recibido su solicitud de cita referente a <span class="strong">'.htmlspecialchars($serviceTitle).'</span>. Nuestro equipo revisará la información y se pondrá en contacto con usted a la brevedad para confirmar detalles.</p>'
+          .($mensaje?'<div class="ref"><span class="strong">Mensaje enviado:</span>\n'.nl2br(htmlspecialchars($mensaje)).'</div>':'')
+          .'<div class="ref">ID Cita: '.htmlspecialchars($citaId).'\nFecha: '.htmlspecialchars($fechaEnvio).'</div>'
+          .'<p>Este mensaje es una constancia de recepción. No es necesario responder salvo que desee añadir información adicional.</p>'
+          .'<p>Atentamente,<br>'.htmlspecialchars($empresaNombre).'</p>'
+          .'<div class="footer">© '.date('Y').' '.htmlspecialchars($empresaNombre).'. Todos los derechos reservados.</div>'
+          .'</div></body></html>';
+
+        send_multipart_email(_safe_email($email), 'Confirmación de solicitud de cita', $plainUser, $htmlUser, $fromAddress, _safe_email($ownerEmail));
       }
 
       $success = true;
@@ -291,12 +340,7 @@ foreach ($servicios as $s) {
               <strong>Email:</strong><br>
               <a href="mailto:<?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?>"><?php echo htmlspecialchars($empresa['Email'] ?? 'contacto@medlex.mx'); ?></a><br><br>
 
-              <strong>Teléfono:</strong><br>
-              <?php if (!empty($empresa['Telefono'])): ?>
-                <a href="tel:<?php echo htmlspecialchars($empresa['Telefono']); ?>"><?php echo htmlspecialchars($empresa['Telefono']); ?></a><br><br>
-              <?php else: ?>
-                <span>No disponible</span><br><br>
-              <?php endif; ?>
+              
 
               <strong>Dirección:</strong><br>
               <?php echo nl2br(htmlspecialchars($empresa['Direccion'] ?? '')); ?>

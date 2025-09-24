@@ -6,6 +6,18 @@ if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
 
+// --- obtener datos de la empresa (logo full) ---
+$empresa = [];
+$logoFullFile = 'logofull.png';
+$resEmp = $conexion->query("SELECT logo_full, logo, Nombre FROM empresa WHERE Activo = 1 LIMIT 1");
+if ($resEmp && $rowEmp = $resEmp->fetch_assoc()) {
+  $empresa = $rowEmp;
+  // prioridad: logo_full, luego logo, luego fallback estático
+  if (!empty($empresa['logo_full'])) $logoFullFile = $empresa['logo_full'];
+  elseif (!empty($empresa['logo'])) $logoFullFile = $empresa['logo'];
+}
+$resEmp && $resEmp->free();
+
 // Consulta para obtener los servicios, incluyendo la imagen y el Id
 $sql = "SELECT Id, Titulo, Descripcion, Image FROM servicios WHERE Activo = 1 ORDER BY Orden ASC, Titulo ASC";
 $res = $conexion->query($sql);
@@ -37,7 +49,7 @@ $res = $conexion->query($sql);
     <section id="inicio" class="hero">
       <div class="hero-content">
         <div class="logo-full-container">
-          <img src="img/logofull.png" alt="MEDLEX Despacho Jurídico" class="logo-full">
+          <img src="img/<?php echo htmlspecialchars($logoFullFile); ?>" alt="<?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?>" class="logo-full">
         </div>
         <div class="hero-text">
           <h1>Tu tranquilidad legal y fiscal comienza en <strong>MEDLEX Despacho Jurídico</strong></h1>
