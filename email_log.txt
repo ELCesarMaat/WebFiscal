@@ -1,0 +1,54 @@
+2025-09-24 22:52:20	MAIL()_FALLBACK	TO=fiscal@medlex.mx	RESULT=FAIL
+2025-09-24 22:52:22	MAIL()_FALLBACK	TO=cesarmaat@hotmail.com	RESULT=FAIL
+2025-09-24 22:52:22	MAIL()_FALLBACK	TO=fiscal@medlex.mx	RESULT=FAIL
+2025-09-24 22:52:24	MAIL()_FALLBACK	TO=cesarmaat@hotmail.com	RESULT=FAIL
+2025-09-24 22:53:43	MAIL()_FALLBACK	TO=fiscal@medlex.mx	RESULT=FAIL
+2025-09-24 22:53:45	MAIL()_FALLBACK	TO=cesarmaat@hotmail.com	RESULT=FAIL
+2025-09-24 23:00:11	PHPMailer_EXCEPTION	SMTP Error: Could not connect to SMTP host. Failed to connect to server
+2025-09-24 23:00:14	MAIL()_FALLBACK	TO=fiscal@medlex.mx	RESULT=FAIL
+2025-09-24 23:00:35	PHPMailer_EXCEPTION	SMTP Error: Could not connect to SMTP host. Failed to connect to server
+2025-09-24 23:00:37	MAIL()_FALLBACK	TO=cesarmaat@hotmail.com	RESULT=FAIL
+2025-09-24 23:04:21	PHPMailer_EXCEPTION	SMTP Error: Could not authenticate.
+2025-09-24 23:04:23	MAIL()_FALLBACK	TO=prueba@ejemplo.com	RESULT=FAIL
+2025-09-24 23:07:19	PHPMailer_EXCEPTION	SMTP Error: Could not authenticate.
+2025-09-24 23:07:45	PHPMailer_EXCEPTION	SMTP Error: Could not authenticate.
+2025-09-24 23:07:57	PHPMailer_EXCEPTION	SMTP Error: Could not authenticate.
+2025-09-24 23:09:19	PHPMailer_EXCEPTION	SMTP Error: The following recipients failed: cesarmaat@hotmail.com: <no-reply@cesarmaat.com>: Sender address rejected: not owned by user yo@cesarmaat.com
+
+2025-09-24 23:10:29	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:11:53	PHPMailer	TO=fiscal@medlex.mx	RESULT=OK
+2025-09-24 23:11:55	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:14:11	PHPMailer	TO=fiscal@medlex.mx	RESULT=OK
+2025-09-24 23:14:13	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:18:54	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-24 23:18:57	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:21:15	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-24 23:21:17	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:25:12	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-24 23:25:14	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-24 23:29:31	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-24 23:29:34	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-25 00:14:56	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK	FROM=yo@cesarmaat.com|María José – MEDLEX	REPLYTO=rodriguezdelfinmj1720@gmail.com
+2025-09-25 00:14:59	PHPMailer	TO=rodriguezdelfinmj1720@gmail.com	RESULT=OK	FROM=yo@cesarmaat.com|MEDLEX	REPLYTO=maatcesar1112@gmail.com
+2025-09-25 00:35:44	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 00:35:47	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 00:35:49	PHPMailer	TO=maatcesar@gmail.com	RESULT=OK
+2025-09-25 00:35:51	PHPMailer	TO=maatcesar@gmail.com	RESULT=OK
+2025-09-25 00:36:53	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 00:36:57	PHPMailer	TO=maatcesar@gmail.com	RESULT=OK
+2025-09-25 05:32:57	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 05:33:01	PHPMailer	TO=gerardomedellin1@hotmail.com	RESULT=OK
+2025-09-25 05:33:23	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 05:33:27	PHPMailer	TO=gerardomedellin1@hotmail.com	RESULT=OK
+2025-09-25 05:33:42	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 05:33:45	PHPMailer	TO=gerardomedellin1@hotmail.com	RESULT=OK
+2025-09-25 05:48:58	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 05:49:01	PHPMailer	TO=maatcesar@gmail.com	RESULT=OK
+2025-09-25 05:49:21	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 05:49:24	PHPMailer	TO=test@test.com	RESULT=OK
+2025-09-25 21:11:28	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 21:11:35	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-25 21:15:38	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 21:15:41	PHPMailer	TO=cesarmaat@hotmail.com	RESULT=OK
+2025-09-25 21:17:26	PHPMailer	TO=maatcesar1112@gmail.com	RESULT=OK
+2025-09-25 21:17:29	PHPMailer	TO=test@gmail.com	RESULT=OK

@@ -1,4 +1,8 @@
 <?php
+// Iniciar sesión para manejar tokens y mensajes flash (PRG)
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 $config = require __DIR__ . '/config.php';
 $dbconf = $config['db'] ?? null;
 if (!$dbconf) {
@@ -26,11 +30,29 @@ if (!empty($empresa['Redes'])) {
 // usar correo de administrador si existe, si no usar email de empresa, si no usar config
 $ownerEmail = $empresa['correo_administrador'] ?? $empresa['Email'] ?? ($config['owner_email'] ?? 'contacto@medlex.mx');
 
+// Restaurar estado de éxito vía PRG (Post/Redirect/Get)
+$success = false;
+$emailWarnings = [];
+// Datos adicionales para mostrar en el mensaje
+$flash = [];
+if (isset($_GET['ok']) && !empty($_SESSION['agendar_flash']['success'])) {
+  $success = true;
+  $flash = $_SESSION['agendar_flash'];
+  $emailWarnings = $flash['warnings'] ?? [];
+  // opcional: $citaId = $_SESSION['agendar_flash']['citaId'] ?? null;
+  unset($_SESSION['agendar_flash']);
+}
+
 // Procesamiento simple del formulario (ahora usando el Id del servicio)
 $errors = [];
-$emailWarnings = [];
-$success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Validar token CSRF de un solo uso
+  $postedToken = $_POST['csrf_token'] ?? '';
+  $sessionToken = $_SESSION['agendar_token'] ?? '';
+  if (!$postedToken || !$sessionToken || !hash_equals($sessionToken, $postedToken)) {
+    $errors[] = 'Sesión expirada o formulario inválido. Por favor recargue la página e intente de nuevo.';
+  }
+
   $nombre = trim($_POST['nombre'] ?? '');
   $email  = trim($_POST['email'] ?? '');
   $telefono = trim($_POST['telefono'] ?? '');
@@ -90,36 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $logoFullUrl = (isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'https') . '://' . ($site) . '/img/' . rawurlencode($logoFullFile);
       $fechaEnvio = date('Y-m-d H:i:s');
 
-      // Función helper para enviar multipart (texto + HTML)
-      if (!function_exists('send_multipart_email')) {
-        function send_multipart_email($to, $subject, $plainBody, $htmlBody, $fromAddress, $replyTo = null) {
-          $boundary = 'bndry_' . bin2hex(random_bytes(8));
-          $headers  = "From: MEDLEX <{$fromAddress}>\r\n";
-          if ($replyTo) $headers .= "Reply-To: {$replyTo}\r\n";
-            // Evitar que algunos filtros marquen como spam agregando organización mínima
-          $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-          $headers .= "MIME-Version: 1.0\r\n";
-          $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
-
-          $messageParts = [];
-          $messageParts[] = "--{$boundary}\r\n".
-            "Content-Type: text/plain; charset=UTF-8\r\n".
-            "Content-Transfer-Encoding: 8bit\r\n\r\n".
-            $plainBody . "\r\n";
-          $messageParts[] = "--{$boundary}\r\n".
-            "Content-Type: text/html; charset=UTF-8\r\n".
-            "Content-Transfer-Encoding: 8bit\r\n\r\n".
-            $htmlBody . "\r\n";
-          $messageParts[] = "--{$boundary}--\r\n";
-          $message = implode('', $messageParts);
-
-          $result = mail($to, $subject, $message, $headers);
-          // Logging básico
-          $logLine = date('Y-m-d H:i:s') . "\tTO={$to}\tSUBJ=" . str_replace(["\r","\n"],' ',$subject) . "\tRESULT=" . ($result?'OK':'FAIL') . "\n";
-          @file_put_contents(__DIR__.'/email_log.txt', $logLine, FILE_APPEND);
-          return $result;
-        }
-      }
+      // Incluir mailer de abstracción
+      require_once __DIR__ . '/mailer.php';
 
       // Datos comunes
       $plainAdmin = "Nueva solicitud de cita\n\n".
@@ -131,10 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ($mensaje ? "Mensaje: \n{$mensaje}\n\n" : "") .
         "ID Cita: {$citaId}\nGenerado: {$fechaEnvio} ({$site})\n";
 
+      $cid = 'logoCID';
       $htmlAdmin = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Nueva Cita</title>' .
         '<style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;color:#2b3540;margin:0;padding:0} .card{background:#ffffff;margin:20px auto;padding:24px;max-width:640px;border-radius:14px;box-shadow:0 6px 18px rgba(20,30,40,.08)} h1{margin:0 0 18px;font-size:20px;color:#1e2730} .meta{margin:0 0 6px;font-size:14px} .label{font-weight:600;color:#45525b} .footer{margin-top:32px;font-size:12px;color:#6b7880;text-align:center} .logo{max-width:240px;margin:0 0 18px} .hl{background:#f0f4f7;padding:10px 14px;border-radius:8px;white-space:pre-line;font-size:14px}</style></head><body>' .
         '<div class="card">'
-        .'<img class="logo" src="'.htmlspecialchars($logoFullUrl).'" alt="Logo">'
+        .'<img class="logo" src="cid:'.htmlspecialchars($cid).'" alt="Logo">'
         .'<h1>Nueva solicitud de cita</h1>'
         .'<p class="meta"><span class="label">Fecha recepción:</span> '.htmlspecialchars($fechaEnvio).'</p>'
         .'<p class="meta"><span class="label">ID Cita:</span> '.htmlspecialchars($citaId).'</p>'
@@ -142,14 +137,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .'<p class="meta"><span class="label">Correo:</span> '.htmlspecialchars($email).'</p>'
         .'<p class="meta"><span class="label">Teléfono:</span> '.($telefono?htmlspecialchars($telefono):'<em>No proporcionado</em>').'</p>'
         .'<p class="meta"><span class="label">Servicio:</span> '.htmlspecialchars($serviceTitle).' (ID '.htmlspecialchars($servicioId).')</p>'
-        .($fecha?'<p class="meta"><span class="label">Fecha solicitada:</span> '.htmlspecialchars($fecha).'</p>':'')
-        .($mensaje?'<div class="hl"><span class="label">Mensaje:</span>\n'.nl2br(htmlspecialchars($mensaje)).'</div>':'')
-        .'<div class="footer">Este correo es informativo. Por favor responda directamente para continuar la gestión.<br>© '.date('Y').' '.htmlspecialchars($empresaNombre).'.</div>'
+        .($mensaje?'<div class="hl"><span class="label">Mensaje:</span> '.nl2br(htmlspecialchars($mensaje)).'</div>':'')
+        .'<div class="footer">Puede responder directamente a este correo para ponerse en contacto con el cliente.<br>© '.date('Y').' '.htmlspecialchars($empresaNombre).'.</div>'
         .'</div></body></html>';
 
       // Enviar al administrador / propietario
       $fromAddress = 'no-reply@' . preg_replace('/^www\./','', $_SERVER['SERVER_NAME'] ?? 'medlex.mx');
-      $adminSent = send_multipart_email(_safe_email($ownerEmail), "Nueva solicitud de cita: {$serviceTitle}", $plainAdmin, $htmlAdmin, $fromAddress, _safe_email($email));
+      $adminSent = send_app_mail([
+        'to' => _safe_email($ownerEmail),
+        'subject' => "Nueva solicitud de cita: {$serviceTitle}",
+        'text' => $plainAdmin,
+        'html' => $htmlAdmin,
+        'reply_to' => _safe_email($email),
+        'from_name' => $nombre . ' – MEDLEX',
+        'embed' => [ [ 'path' => __DIR__.'/img/'.$logoFullFile, 'cid' => $cid ] ]
+      ]);
       if (!$adminSent) {
         $emailWarnings[] = 'No se pudo enviar correo al administrador (revisar configuración de correo del servidor).';
       }
@@ -163,24 +165,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $htmlUser = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Confirmación de solicitud</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;margin:0;padding:0;color:#243039} .card{background:#ffffff;margin:20px auto;padding:28px;max-width:640px;border-radius:16px;box-shadow:0 8px 26px rgba(20,30,40,.08)} h1{margin:0 0 14px;font-size:22px;color:#1d2730} p{font-size:15px;line-height:1.5;margin:0 0 14px} .logo{max-width:240px;margin:0 0 18px} .ref{background:#f0f4f7;padding:14px 16px;border-radius:10px;font-size:13px;line-height:1.4;white-space:pre-line} .footer{margin-top:28px;font-size:12px;color:#6b7880;text-align:center} .strong{font-weight:600}</style></head><body>'
           .'<div class="card">'
-          .'<img class="logo" src="'.htmlspecialchars($logoFullUrl).'" alt="Logo">'
+          .'<img class="logo" src="cid:'.htmlspecialchars($cid).'" alt="Logo">'
           .'<h1>Confirmación de solicitud</h1>'
           .'<p>Estimado(a) <span class="strong">'.htmlspecialchars($nombre).'</span>,</p>'
           .'<p>Hemos recibido su solicitud de cita referente a <span class="strong">'.htmlspecialchars($serviceTitle).'</span>. Nuestro equipo revisará la información y se pondrá en contacto con usted a la brevedad para confirmar detalles.</p>'
-          .($mensaje?'<div class="ref"><span class="strong">Mensaje enviado:</span>\n'.nl2br(htmlspecialchars($mensaje)).'</div>':'')
-          .'<div class="ref">ID Cita: '.htmlspecialchars($citaId).'\nFecha: '.htmlspecialchars($fechaEnvio).'</div>'
+          .($mensaje?'<div class="ref"><span class="strong">Mensaje enviado:</span> '.nl2br(htmlspecialchars($mensaje)).'</div>':'')
+          .'<div class="ref">ID Cita: '.htmlspecialchars($citaId).' </div>'
           .'<p>Este mensaje es una constancia de recepción. No es necesario responder salvo que desee añadir información adicional.</p>'
           .'<p>Atentamente,<br>'.htmlspecialchars($empresaNombre).'</p>'
           .'<div class="footer">© '.date('Y').' '.htmlspecialchars($empresaNombre).'. Todos los derechos reservados.</div>'
           .'</div></body></html>';
 
-        $userSent = send_multipart_email(_safe_email($email), 'Confirmación de solicitud de cita', $plainUser, $htmlUser, $fromAddress, _safe_email($ownerEmail));
+        $userSent = send_app_mail([
+          'to' => _safe_email($email),
+          'subject' => 'Confirmación de solicitud de cita',
+          'text' => $plainUser,
+          'html' => $htmlUser,
+          'reply_to' => _safe_email($ownerEmail),
+          'embed' => [ [ 'path' => __DIR__.'/img/'.$logoFullFile, 'cid' => $cid ] ]
+        ]);
         if (!$userSent) {
           $emailWarnings[] = 'La confirmación no pudo enviarse a su correo (guarde el ID de la cita).';
         }
       }
 
-      $success = true;
+      // PRG: limpiar token usado y redirigir a GET para evitar reenvío en recarga
+      unset($_SESSION['agendar_token']);
+      $_SESSION['agendar_flash'] = [
+        'success' => true,
+        'warnings' => $emailWarnings,
+        'citaId' => $citaId,
+        'sent_admin' => (bool)$adminSent,
+        'sent_user' => (bool)$userSent,
+        'owner_email' => $ownerEmail,
+        'client_email' => $email,
+        'service_title' => $serviceTitle,
+      ];
+      header('Location: agendar.php?ok=1');
+      exit;
     }
   }
 }
@@ -279,6 +301,12 @@ foreach ($servicios as $s) {
       .hero-bg .bg-image { box-shadow: inset 0 80px 100px rgba(0,0,0,0.55), inset 0 -40px 80px rgba(0,0,0,0.45); }
       .hero-text { text-align: left; }
     }
+
+    /* Botón con estado de carga */
+    .btn.is-loading { opacity: 0.9; pointer-events: none; position: relative; }
+    .btn .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.55); border-top-color:#fff; border-radius: 50%; margin-left:10px; vertical-align: middle; animation: spin .7s linear infinite; }
+    .btn.is-loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -313,12 +341,29 @@ foreach ($servicios as $s) {
 
           <?php if ($success): ?>
             <div class="notice success" style="margin-top:16px; padding:12px; background:#e6f7ea; color:#145a2a; border-radius:8px;">
-              Gracias, su solicitud ha sido recibida. Le contactaremos pronto.
+              Gracias, su solicitud ha sido recibida.
+              <?php if (!empty($flash['service_title'])): ?>
+                <br><strong>Tema/Servicio:</strong> <?php echo htmlspecialchars($flash['service_title']); ?>
+              <?php endif; ?>
+              <?php if (!empty($flash['sent_user']) && !empty($flash['client_email'])): ?>
+                <br><strong>Confirmación enviada a:</strong> <?php echo htmlspecialchars($flash['client_email']); ?>
+              <?php endif; ?>
+              
+              <br>Le contactaremos pronto.
             </div>
             <?php if (!empty($emailWarnings)): ?>
               <div class="notice warning" style="margin-top:12px; padding:12px; background:#fff8e1; color:#8a6d00; border-radius:8px;">
                 <?php echo implode('<br>', array_map('htmlspecialchars', $emailWarnings)); ?>
-                <br>Si está en entorno local (XAMPP) configure el envío SMTP o use una librería como PHPMailer.
+                <?php if (!empty($GLOBALS['MAIL_LAST_ERROR'])): ?>
+                  <br><strong>Detalle técnico:</strong> <?php echo htmlspecialchars($GLOBALS['MAIL_LAST_ERROR']); ?>
+                <?php endif; ?>
+                <br>Acciones recomendadas:
+                <ul style="margin:6px 0 0 18px; padding:0; font-size:0.85rem; line-height:1.3;">
+                  <li>Instale PHPMailer: <code>composer require phpmailer/phpmailer</code></li>
+                  <li>Complete datos SMTP reales en <code>config.php</code></li>
+                  <li>Verifique puerto/firewall (587 TLS o 465 SSL).</li>
+                  <li>Si es Gmail: use contraseña de aplicación (2FA).</li>
+                </ul>
               </div>
             <?php endif; ?>
           <?php else: ?>
@@ -328,7 +373,13 @@ foreach ($servicios as $s) {
               </div>
             <?php endif; ?>
 
-            <form action="agendar.php" method="post" style="margin-top:18px; display:grid; gap:12px; position:relative;">
+            <?php
+              // Generar nuevo token CSRF para la siguiente solicitud (o primera carga)
+              $formToken = bin2hex(random_bytes(16));
+              $_SESSION['agendar_token'] = $formToken;
+            ?>
+            <form id="agendarForm" action="agendar.php" method="post" style="margin-top:18px; display:grid; gap:12px; position:relative;">
+              <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($formToken); ?>">
               <div style="display:flex; gap:12px; flex-wrap:wrap;">
                 <input type="text" name="nombre" placeholder="Nombre completo" value="<?php echo htmlspecialchars($_POST['nombre'] ?? '') ?>" required style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
                 <input type="email" name="email" placeholder="Correo electrónico" value="<?php echo htmlspecialchars($_POST['email'] ?? '') ?>" required style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -347,8 +398,12 @@ foreach ($servicios as $s) {
               </div>
 
               <textarea name="mensaje" placeholder="Mensaje adicional (opcional)" rows="4" style="padding:10px; border-radius:8px; border:1px solid #ddd;"><?php echo htmlspecialchars($_POST['mensaje'] ?? '') ?></textarea>
-               <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <button type="submit" class="btn btn-orange" style="padding:10px 18px; border-radius:8px; font-weight:700;">Enviar solicitud</button>
+               <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <button id="submitBtn" type="submit" class="btn btn-orange" style="padding:10px 18px; border-radius:8px; font-weight:700; display:inline-flex; align-items:center;">
+                  <span class="btn-label">Enviar solicitud</span>
+                  <span class="spinner" aria-hidden="true"></span>
+                </button>
+                <span id="formLoading" style="display:none; font-size:0.95rem; color:#6b7a82;">Procesando su solicitud...</span>
               </div>
             </form>
           <?php endif; ?>
@@ -378,6 +433,28 @@ foreach ($servicios as $s) {
   </main>
 
   <footer>
+  
+  <script>
+    (function(){
+      const form = document.getElementById('agendarForm');
+      if (!form) return;
+      const btn = document.getElementById('submitBtn');
+      const loadingText = document.getElementById('formLoading');
+      let submitting = false;
+
+      form.addEventListener('submit', function(){
+        if (submitting) return;
+        submitting = true;
+        if (btn){
+          btn.classList.add('is-loading');
+          btn.setAttribute('disabled', 'disabled');
+        }
+        if (loadingText){
+          loadingText.style.display = 'inline';
+        }
+      });
+    })();
+  </script>
     <div class="footer-bg" style="padding:28px 0;">
       <div style="max-width:1100px; margin:auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div style="min-width:220px;">
