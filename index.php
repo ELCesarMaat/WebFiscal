@@ -33,7 +33,8 @@ $res = $conexion->query($sql);
 <body>
   <header>
     <div class="header-container">
-      <img src="img/logo.png" alt="MEDLEX" class="logo">
+      <?php $miniLogoPath = __DIR__ . '/img/logo.png'; $miniLogoV = @file_exists($miniLogoPath) ? @filemtime($miniLogoPath) : null; ?>
+      <img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="MEDLEX" class="logo">
       <nav>
         <ul>
           <li><a href="#inicio">Quienes somos</a></li>
@@ -49,7 +50,8 @@ $res = $conexion->query($sql);
     <section id="inicio" class="hero">
       <div class="hero-content">
         <div class="logo-full-container">
-          <img src="img/<?php echo htmlspecialchars($logoFullFile); ?>" alt="<?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?>" class="logo-full">
+          <?php $logoV = @filemtime(__DIR__ . '/img/' . $logoFullFile) ?: null; ?>
+          <img src="<?php echo 'img/' . htmlspecialchars($logoFullFile) . ($logoV ? ('?v=' . $logoV) : ''); ?>" alt="<?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?>" class="logo-full">
         </div>
         <div class="hero-text">
           <h1>Tu tranquilidad legal y fiscal comienza en <strong>MEDLEX Despacho Jurídico</strong></h1>
@@ -71,7 +73,8 @@ $res = $conexion->query($sql);
         <?php while($servicio = $res->fetch_assoc()):
           $serviceUrl = 'agendar.php?servicio_id=' . urlencode($servicio['Id']);
         ?>
-          <div class="servicio-card" style="background-image: url('img/<?php echo htmlspecialchars($servicio['Image']); ?>');">
+          <?php $img = $servicio['Image']; $imgPath = __DIR__ . '/img/' . $img; $imgV = @file_exists($imgPath) ? @filemtime($imgPath) : null; ?>
+          <div class="servicio-card" style="background-image: url('img/<?php echo htmlspecialchars($img); ?><?php echo $imgV ? ('?v=' . $imgV) : ''; ?>');">
             <span><?php echo htmlspecialchars($servicio['Titulo']); ?></span>
             <div class="servicio-info">
               <?php echo htmlspecialchars($servicio['Descripcion']); ?><br>

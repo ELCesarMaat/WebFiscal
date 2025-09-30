@@ -312,7 +312,8 @@ foreach ($servicios as $s) {
 <body>
   <header>
     <div class="header-container">
-      <a href="index.php"><img src="img/logo.png" alt="MEDLEX" class="logo"></a>
+      <?php $miniLogoPath = __DIR__ . '/img/logo.png'; $miniLogoV = @file_exists($miniLogoPath) ? @filemtime($miniLogoPath) : null; ?>
+      <a href="index.php"><img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="MEDLEX" class="logo"></a>
       <nav>
         <ul>
           <li><a href="index.php#inicio">Quienes somos</a></li>
@@ -328,7 +329,8 @@ foreach ($servicios as $s) {
       <!-- contenedor para imágenes de fondo (crossfade) -->
       <div class="hero-bg" aria-hidden="true">
         <?php if ($initialImage): ?>
-          <div class="bg-image show" style="background-image: url('img/<?php echo htmlspecialchars($initialImage); ?>');"></div>
+          <?php $iniPath = __DIR__ . '/img/' . $initialImage; $iniV = @file_exists($iniPath) ? @filemtime($iniPath) : null; ?>
+          <div class="bg-image show" style="background-image: url('img/<?php echo htmlspecialchars($initialImage); ?><?php echo $iniV ? ('?v=' . $iniV) : ''; ?>');"></div>
         <?php endif; ?>
       </div>
 
@@ -462,7 +464,8 @@ foreach ($servicios as $s) {
           <?php echo nl2br(htmlspecialchars($empresa['Direccion'] ?? '')); ?>
         </div>
         <div style="text-align:center; min-width:220px;">
-          <img src="img/<?php echo htmlspecialchars($empresa['Logo'] ?? 'logofull.png'); ?>" alt="Logo" style="max-width:160px; width:100%; height:auto;">
+          <?php $footerLogoFile = $empresa['Logo'] ?? 'logofull.png'; $footerLogoPath = __DIR__ . '/img/' . $footerLogoFile; $footerLogoV = @file_exists($footerLogoPath) ? @filemtime($footerLogoPath) : null; ?>
+          <img src="img/<?php echo htmlspecialchars($footerLogoFile); ?><?php echo $footerLogoV ? ('?v=' . $footerLogoV) : ''; ?>" alt="Logo" style="max-width:160px; width:100%; height:auto;">
         </div>
         <div style="min-width:220px; text-align:right;">
           <strong>Contacto</strong><br>
@@ -485,7 +488,12 @@ foreach ($servicios as $s) {
     // mapa id -> image (desde PHP)
     const imageMap = <?php
       $map = [];
-      foreach ($servicios as $s) $map[$s['Id']] = $s['Image'];
+      foreach ($servicios as $s) {
+        $img = $s['Image'];
+        $p = __DIR__ . '/img/' . $img;
+        $v = @file_exists($p) ? @filemtime($p) : null;
+        $map[$s['Id']] = $img . ($v ? ('?v=' . $v) : '');
+      }
       echo json_encode($map, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP);
     ?>;
 
@@ -493,11 +501,11 @@ foreach ($servicios as $s) {
     const select = document.querySelector('select[name="servicio"]');
 
     function changeHeroBgById(id) {
-      const img = imageMap[id] || '';
+  const img = imageMap[id] || '';
       if (!img) return;
       const wrapper = document.createElement('div');
       wrapper.className = 'bg-image';
-      wrapper.style.backgroundImage = `url('img/${img}')`;
+  wrapper.style.backgroundImage = `url('img/${img}')`;
       heroBg.appendChild(wrapper);
       // forzar reflow y mostrar
       requestAnimationFrame(() => wrapper.classList.add('show'));
