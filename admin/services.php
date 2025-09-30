@@ -5,6 +5,45 @@ $db = $config['db'];
 $mysqli = new mysqli($db['host'],$db['user'],$db['pass'],$db['name']);
 $err = $msg = '';
 
+// Endpoint AJAX para reordenar (actualiza columna Orden)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && stripos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+  $payload = json_decode(file_get_contents('php://input'), true) ?: [];
+  if (($payload['action'] ?? '') === 'reorder') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (!check_csrf($payload['csrf'] ?? '')) {
+      http_response_code(400);
+      echo json_encode(['ok' => false, 'error' => 'CSRF inválido']);
+      exit;
+    }
+    $order = $payload['order'] ?? [];
+    if (!is_array($order) || empty($order)) {
+      http_response_code(400);
+      echo json_encode(['ok' => false, 'error' => 'Orden vacío']);
+      exit;
+    }
+    // Sanitizar a enteros únicos
+    $ids = array_values(array_unique(array_map('intval', $order)));
+    try {
+      $mysqli->begin_transaction();
+      $stmt = $mysqli->prepare('UPDATE Servicios SET Orden=? WHERE Id=?');
+      $pos = 1;
+      foreach ($ids as $id) {
+        $stmt->bind_param('ii', $pos, $id);
+        if (!$stmt->execute()) throw new Exception($stmt->error);
+        $pos++;
+      }
+      $stmt->close();
+      $mysqli->commit();
+      echo json_encode(['ok' => true]);
+    } catch (Throwable $e) {
+      $mysqli->rollback();
+      http_response_code(500);
+      echo json_encode(['ok' => false, 'error' => 'DB: '.$e->getMessage()]);
+    }
+    exit;
+  }
+}
+
 // manejar acciones POST: create / update / delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (!check_csrf($_POST['csrf'] ?? '')) { $err = 'Token CSRF inválido.'; }
@@ -87,6 +126,12 @@ $csrf = $_SESSION['csrf_token'];
     .form-inline input[type="text"], .form-inline textarea, .form-inline input[type="number"]{width:100%;padding:8px;border:1px solid #e6e9eb;border-radius:8px}
     .small-muted{font-size:0.9rem;color:#7d8b90}
     .hidden{display:none}
+    /* Estilos de arrastre */
+    .service-card{cursor:grab}
+    .service-card:active{cursor:grabbing}
+    .service-card.dragging{opacity:0.6; transform:scale(0.995)}
+    .drop-indicator{height:8px;background:#ffb30033;border-radius:4px;margin:-6px 0 6px 0;display:none}
+    .drop-indicator.show{display:block}
     @media (max-width:700px){ .service-card img{height:120px} .service-desc{max-height:54px} }
   </style>
 </head>
@@ -117,9 +162,10 @@ $csrf = $_SESSION['csrf_token'];
     <hr>
 
     <h2 style="margin-top:18px">Servicios existentes</h2>
-    <div class="services-grid" id="servicesGrid">
+    <div id="reorderStatus" class="small-muted" style="display:none; margin:6px 0 10px;">Guardando nuevo orden…</div>
+    <div class="services-grid" id="servicesGrid" data-csrf="<?php echo htmlspecialchars($csrf); ?>">
       <?php foreach($servicios as $s): ?>
-        <article class="service-card" data-id="<?php echo $s['Id']; ?>">
+        <article class="service-card" data-id="<?php echo $s['Id']; ?>" draggable="true">
           <?php if(!empty($s['Image'])): ?>
             <img src="../img/<?php echo htmlspecialchars($s['Image']); ?>" alt="<?php echo htmlspecialchars($s['Titulo']); ?>">
           <?php else: ?>
@@ -129,7 +175,7 @@ $csrf = $_SESSION['csrf_token'];
           <div class="service-head">
             <div class="service-meta">
               <h3 class="service-title"><?php echo htmlspecialchars($s['Titulo']); ?></h3>
-              <div class="small-muted">ID: <?php echo $s['Id']; ?> — Orden: <?php echo intval($s['Orden'] ?? 0); ?> — <?php echo $s['Activo'] ? '<span class="badge">Activo</span>' : '<span class="badge" style="opacity:.6">Inactivo</span>'; ?></div>
+              <div class="small-muted js-meta">ID: <?php echo $s['Id']; ?> — Orden: <span class="js-order-num"><?php echo intval($s['Orden'] ?? 0); ?></span> — <?php echo $s['Activo'] ? '<span class="badge">Activo</span>' : '<span class="badge" style="opacity:.6">Inactivo</span>'; ?></div>
             </div>
           </div>
 
@@ -197,6 +243,77 @@ $csrf = $_SESSION['csrf_token'];
         if (form) form.classList.add('hidden');
       });
     });
+
+    // Drag & Drop reordenamiento
+    (function(){
+      const grid = document.getElementById('servicesGrid');
+      if (!grid) return;
+      const status = document.getElementById('reorderStatus');
+      const csrf = grid.getAttribute('data-csrf');
+
+      const getDraggables = () => Array.from(grid.querySelectorAll('article.service-card'));
+
+      const getDragAfterElement = (container, y) => {
+        const els = getDraggables().filter(el => !el.classList.contains('dragging'));
+        let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+        els.forEach(el => {
+          const box = el.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+          if (offset < 0 && offset > closest.offset) {
+            closest = { offset, element: el };
+          }
+        });
+        return closest.element;
+      };
+
+      grid.addEventListener('dragstart', (e) => {
+        const item = e.target.closest('article.service-card');
+        if (!item) return;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      grid.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(grid, e.clientY);
+        const dragging = grid.querySelector('.dragging');
+        if (!dragging) return;
+        if (afterElement == null) {
+          grid.appendChild(dragging);
+        } else {
+          grid.insertBefore(dragging, afterElement);
+        }
+      });
+
+      const persistOrder = async () => {
+        const ids = getDraggables().map(el => el.getAttribute('data-id'));
+        if (status) { status.style.display = 'block'; status.textContent = 'Guardando nuevo orden…'; }
+        try {
+          const res = await fetch('services.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reorder', csrf: csrf, order: ids })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || 'Error desconocido');
+          // Actualizar numeración visible
+          getDraggables().forEach((el, idx) => {
+            const num = el.querySelector('.js-order-num');
+            if (num) num.textContent = (idx + 1);
+          });
+          if (status) { status.style.display = 'block'; status.style.color = 'green'; status.textContent = 'Orden guardado.'; }
+          setTimeout(()=>{ if (status) status.style.display = 'none'; }, 1600);
+        } catch (err) {
+          if (status) { status.style.display = 'block'; status.style.color = '#b00020'; status.textContent = 'No se pudo guardar el orden: ' + err.message; }
+        }
+      };
+
+      grid.addEventListener('dragend', () => {
+        const dragging = grid.querySelector('.dragging');
+        if (dragging) dragging.classList.remove('dragging');
+        persistOrder();
+      });
+    })();
   </script>
 </body>
 </html>

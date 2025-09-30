@@ -7,8 +7,8 @@ $mysqli = new mysqli($db['host'],$db['user'],$db['pass'],$db['name']);
 if ($mysqli->connect_error) die($mysqli->connect_error);
 
 // Cambia estos valores antes de ejecutar
-$username = 'admin';
-$password = 'ChangeMe123!'; // CAMBIA la contraseña
+$username = 'admin_5qbd';
+$password = 'ELGvue5PGYeUjY8d'; // CAMBIA la contraseña
 $email = 'admin@tu-dominio.com';
 $display = 'Administrador';
 

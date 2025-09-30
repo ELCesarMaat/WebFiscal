@@ -39,6 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     .btn-done{background:#2ecc71;color:#fff;border:none}
     .btn-pend{background:#f0ad4e;color:#fff;border:none}
     table th, table td{padding:8px 10px;text-align:left}
+    /* Badges de estado */
+    .badge-status{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:800;font-size:0.85rem;letter-spacing:.2px}
+    .badge-pendiente{background:#fff3cd;border:1px solid #ffeeba;color:#856404}
+    .badge-realizada{background:#d4edda;border:1px solid #c3e6cb;color:#155724}
+    /* Botones deshabilitados */
+    .btn-inline[disabled]{opacity:.6;cursor:not-allowed}
   </style>
 </head>
 <body>
@@ -64,7 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         echo "<td>".htmlspecialchars($r['Email'])."</td>";
         echo "<td>".htmlspecialchars($r['Telefono'])."</td>";
         echo "<td>".htmlspecialchars($r['Servicio'])."</td>";
-        echo "<td>".htmlspecialchars($r['Estado'])."</td>";
+        $estado = strtolower($r['Estado'] ?? '');
+        if ($estado === 'pendiente') {
+          $badge = "<span class='badge-status badge-pendiente'>PENDIENTE</span>";
+        } elseif ($estado === 'realizado') {
+          $badge = "<span class='badge-status badge-realizada'>REALIZADA</span>";
+        } else {
+          $badge = htmlspecialchars($r['Estado'] ?? '');
+        }
+        echo "<td>".$badge."</td>";
         // acciones: dos formularios inline para marcar pendiente o realizado
         echo "<td>";
         // marcar pendiente
@@ -73,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         echo '<input type="hidden" name="action" value="update_status">';
         echo '<input type="hidden" name="id" value="'.htmlspecialchars($r['Id']).'">';
         echo '<input type="hidden" name="status" value="pendiente">';
-        echo '<button class="btn-inline btn-pend" type="submit">Pendiente</button>';
+        $disabledPend = ($estado === 'pendiente') ? ' disabled' : '';
+        echo '<button class="btn-inline btn-pend" type="submit"'.$disabledPend.'>Pendiente</button>';
         echo '</form>';
         // marcar realizado
         echo '<form method="post" style="display:inline">';
@@ -81,7 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         echo '<input type="hidden" name="action" value="update_status">';
         echo '<input type="hidden" name="id" value="'.htmlspecialchars($r['Id']).'">';
         echo '<input type="hidden" name="status" value="realizado">';
-        echo '<button class="btn-inline btn-done" type="submit">Realizado</button>';
+        $disabledDone = ($estado === 'realizado') ? ' disabled' : '';
+        echo '<button class="btn-inline btn-done" type="submit"'.$disabledDone.'>Realizado</button>';
         echo '</form>';
 
         echo "</td></tr>";
