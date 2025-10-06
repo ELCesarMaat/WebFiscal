@@ -35,7 +35,7 @@ $success = false;
 $emailWarnings = [];
 // Datos adicionales para mostrar en el mensaje
 $flash = [];
-if (isset($_GET['ok']) && !empty($_SESSION['agendar_flash']['success'])) {
+if (isset($_GET['success']) && !empty($_SESSION['agendar_flash']['success'])) {
   $success = true;
   $flash = $_SESSION['agendar_flash'];
   $emailWarnings = $flash['warnings'] ?? [];
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'client_email' => $email,
         'service_title' => $serviceTitle,
       ];
-      header('Location: agendar.php?ok=1');
+      header('Location: agendar.php?success=1');
       exit;
     }
   }

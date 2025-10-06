@@ -6,17 +6,10 @@ if ($conexion->connect_error) {
   die("Error de conexión: " . $conexion->connect_error);
 }
 
-// --- obtener datos de la empresa (logo full) ---
-$empresa = [];
-$logoFullFile = 'logofull.png';
-$resEmp = $conexion->query("SELECT logo_full, logo, Nombre FROM empresa WHERE Activo = 1 LIMIT 1");
-if ($resEmp && $rowEmp = $resEmp->fetch_assoc()) {
-  $empresa = $rowEmp;
-  // prioridad: logo_full, luego logo, luego fallback estático
-  if (!empty($empresa['logo_full'])) $logoFullFile = $empresa['logo_full'];
-  elseif (!empty($empresa['logo'])) $logoFullFile = $empresa['logo'];
-}
-$resEmp && $resEmp->free();
+// --- obtener datos de la empresa (reutilizable) ---
+require_once __DIR__ . '/inc/empresa.php';
+$empresaNombre = empresa_nombre('MEDLEX Despacho Jurídico');
+$logoFullFile = empresa_logo_full_filename('logofull.png');
 
 // Consulta para obtener los servicios, incluyendo la imagen y el Id
 $sql = "SELECT Id, Titulo, Descripcion, Image FROM servicios WHERE Activo = 1 ORDER BY Orden ASC, Titulo ASC";
@@ -27,14 +20,14 @@ $res = $conexion->query($sql);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MEDLEX Despacho Jurídico | Temas fiscales y contables</title>
+  <title><?php echo htmlspecialchars($empresaNombre); ?> | Temas fiscales y contables</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <header>
     <div class="header-container">
       <?php $miniLogoPath = __DIR__ . '/img/logo.png'; $miniLogoV = @file_exists($miniLogoPath) ? @filemtime($miniLogoPath) : null; ?>
-      <img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="MEDLEX" class="logo">
+  <img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="<?php echo htmlspecialchars($empresaNombre); ?>" class="logo">
       <nav>
         <ul>
           <li><a href="#inicio">Quienes somos</a></li>
@@ -51,12 +44,12 @@ $res = $conexion->query($sql);
       <div class="hero-content">
         <div class="logo-full-container">
           <?php $logoV = @filemtime(__DIR__ . '/img/' . $logoFullFile) ?: null; ?>
-          <img src="<?php echo 'img/' . htmlspecialchars($logoFullFile) . ($logoV ? ('?v=' . $logoV) : ''); ?>" alt="<?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?>" class="logo-full">
+          <img src="<?php echo 'img/' . htmlspecialchars($logoFullFile) . ($logoV ? ('?v=' . $logoV) : ''); ?>" alt="<?php echo htmlspecialchars($empresaNombre); ?>" class="logo-full">
         </div>
         <div class="hero-text">
-          <h1>Tu tranquilidad legal y fiscal comienza en <strong>MEDLEX Despacho Jurídico</strong></h1>
+          <h1>Tu tranquilidad legal y fiscal comienza en <strong><?php echo htmlspecialchars($empresaNombre); ?></strong></h1>
           <p>
-            En MEDLEX, nuestro equipo de abogados y especialistas te acompaña en cada paso para resolver tus necesidades legales y fiscales. Ofrecemos asesoría y defensa en <strong>materia penal, civil, familiar, laboral y fiscal</strong>, brindando soluciones integrales y personalizadas para proteger tus intereses y patrimonio.<br><br>
+            En <?php echo htmlspecialchars($empresaNombre); ?>, nuestro equipo de abogados y especialistas te acompaña en cada paso para resolver tus necesidades legales y fiscales. Ofrecemos asesoría y defensa en <strong>materia penal, civil, familiar, laboral y fiscal</strong>, brindando soluciones integrales y personalizadas para proteger tus intereses y patrimonio.<br><br>
             Agenda tu cita y recibe atención profesional en divorcios, herencias, contratos, despidos, defensa penal y consultoría fiscal. ¡Confía en nosotros para cuidar lo que más importa!
           </p>
           <div class="hero-buttons">
@@ -142,7 +135,7 @@ $res = $conexion->query($sql);
   </main>
   <footer>
     <div class="footer-bg">
-      <p>© <?php echo date('Y'); ?> MEDLEX Despacho Jurídico. Todos los derechos reservados.</p>
+  <p>© <?php echo date('Y'); ?> <?php echo htmlspecialchars($empresaNombre); ?>. Todos los derechos reservados.</p>
     </div>
   </footer>
   
