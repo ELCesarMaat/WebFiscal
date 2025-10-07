@@ -30,6 +30,10 @@ if (!empty($empresa['Redes'])) {
 // usar correo de administrador si existe, si no usar email de empresa, si no usar config
 $ownerEmail = $empresa['correo_administrador'] ?? $empresa['Email'] ?? ($config['owner_email'] ?? 'contacto@medlex.mx');
 
+// Nombre de empresa dinámico (fallback simple)
+$empresaNombre = trim($empresa['Nombre'] ?? '');
+if ($empresaNombre === '') { $empresaNombre = 'Tu Empresa'; }
+
 // Restaurar estado de éxito vía PRG (Post/Redirect/Get)
 $success = false;
 $emailWarnings = [];
@@ -106,8 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($insertOk) {
       // --- Preparar correos profesionales (multipart alternative) ---
-      $site = $_SERVER['HTTP_HOST'] ?? 'MEDLEX';
-      $empresaNombre = $empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico';
+      $site = $_SERVER['HTTP_HOST'] ?? $empresaNombre;
+      // $empresaNombre ya definido arriba
       $logoFullFile = $empresa['logo_full'] ?? ($empresa['Logo'] ?? 'logofull.png');
       $logoFullUrl = (isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'https') . '://' . ($site) . '/img/' . rawurlencode($logoFullFile);
       $fechaEnvio = date('Y-m-d H:i:s');
@@ -149,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'text' => $plainAdmin,
         'html' => $htmlAdmin,
         'reply_to' => _safe_email($email),
-        'from_name' => $nombre . ' – MEDLEX',
+        'from_name' => $nombre . ' – ' . $empresaNombre,
         'embed' => [ [ 'path' => __DIR__.'/img/'.$logoFullFile, 'cid' => $cid ] ]
       ]);
       if (!$adminSent) {
@@ -239,7 +243,7 @@ foreach ($servicios as $s) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Agendar | MEDLEX Despacho Jurídico</title>
+  <title>Agendar | <?php echo htmlspecialchars($empresaNombre); ?></title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     /* cambios específicos para animar fondo y mejorar legibilidad */
@@ -313,7 +317,7 @@ foreach ($servicios as $s) {
   <header>
     <div class="header-container">
       <?php $miniLogoPath = __DIR__ . '/img/logo.png'; $miniLogoV = @file_exists($miniLogoPath) ? @filemtime($miniLogoPath) : null; ?>
-      <a href="index.php"><img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="MEDLEX" class="logo"></a>
+      <a href="index.php"><img src="img/logo.png<?php echo $miniLogoV ? ('?v=' . $miniLogoV) : ''; ?>" alt="<?php echo htmlspecialchars($empresaNombre); ?>" class="logo"></a>
       <nav>
         <ul>
           <li><a href="index.php#inicio">Quienes somos</a></li>
@@ -460,12 +464,12 @@ foreach ($servicios as $s) {
     <div class="footer-bg" style="padding:28px 0;">
       <div style="max-width:1100px; margin:auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px;">
         <div style="min-width:220px;">
-          <strong><?php echo htmlspecialchars($empresa['Nombre'] ?? 'MEDLEX Despacho Jurídico'); ?></strong><br>
+          <strong><?php echo htmlspecialchars($empresaNombre); ?></strong><br>
           <?php echo nl2br(htmlspecialchars($empresa['Direccion'] ?? '')); ?>
         </div>
         <div style="text-align:center; min-width:220px;">
           <?php $footerLogoFile = $empresa['Logo'] ?? 'logofull.png'; $footerLogoPath = __DIR__ . '/img/' . $footerLogoFile; $footerLogoV = @file_exists($footerLogoPath) ? @filemtime($footerLogoPath) : null; ?>
-          <img src="img/<?php echo htmlspecialchars($footerLogoFile); ?><?php echo $footerLogoV ? ('?v=' . $footerLogoV) : ''; ?>" alt="Logo" style="max-width:160px; width:100%; height:auto;">
+          <img src="img/<?php echo htmlspecialchars($footerLogoFile); ?><?php echo $footerLogoV ? ('?v=' . $footerLogoV) : ''; ?>" alt="<?php echo htmlspecialchars($empresaNombre); ?>" style="max-width:160px; width:100%; height:auto;">
         </div>
         <div style="min-width:220px; text-align:right;">
           <strong>Contacto</strong><br>
@@ -475,7 +479,7 @@ foreach ($servicios as $s) {
       </div>
       <hr style="margin:18px auto 12px; max-width:1100px; border:none; border-top:1px solid #eee;">
       <div style="max-width:1100px; margin:auto; display:flex; justify-content:space-between; flex-wrap:wrap; font-size:0.95rem;">
-        <span>Copyright © <?php echo date('Y'); ?> MEDLEX Despacho Jurídico. Todos los derechos reservados.</span>
+        <span>Copyright © <?php echo date('Y'); ?> <?php echo htmlspecialchars($empresaNombre); ?>. Todos los derechos reservados.</span>
         <span>
           <a href="#" style="margin-right:18px;">Políticas de Asesoría Personalizada</a>
           <a href="#">Aviso de Privacidad</a>
