@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && stripos($_SERVER['CONTENT_TYPE'] ??
     $ids = array_values(array_unique(array_map('intval', $order)));
     try {
       $mysqli->begin_transaction();
-      $stmt = $mysqli->prepare('UPDATE Servicios SET Orden=? WHERE Id=?');
+      $stmt = $mysqli->prepare('UPDATE servicios SET Orden=? WHERE Id=?');
       $pos = 1;
       foreach ($ids as $id) {
         $stmt->bind_param('ii', $pos, $id);
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dest = __DIR__ . '/../img/' . $safe;
         if (move_uploaded_file($tmp, $dest)) $imageName = $safe;
       }
-      $stmt = $mysqli->prepare("INSERT INTO Servicios (Titulo, Descripcion, Image, Activo, Orden) VALUES (?, ?, ?, 1, ?)");
+      $stmt = $mysqli->prepare("INSERT INTO servicios (Titulo, Descripcion, Image, Activo, Orden) VALUES (?, ?, ?, 1, ?)");
       $stmt->bind_param("sssi", $titulo, $desc, $imageName, $orden);
       if ($stmt->execute()) $msg = 'Servicio creado.'; else $err = $mysqli->error;
       $stmt->close();
@@ -76,11 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $safe = basename($_FILES['image']['name']);
         $dest = __DIR__ . '/../img/' . $safe;
         if (move_uploaded_file($tmp, $dest)) {
-          $stmt = $mysqli->prepare("UPDATE Servicios SET Titulo=?, Descripcion=?, Image=?, Orden=? WHERE Id=?");
+          $stmt = $mysqli->prepare("UPDATE servicios SET Titulo=?, Descripcion=?, Image=?, Orden=? WHERE Id=?");
           $stmt->bind_param("sssii", $titulo, $desc, $safe, $orden, $id);
         }
       } else {
-        $stmt = $mysqli->prepare("UPDATE Servicios SET Titulo=?, Descripcion=?, Orden=? WHERE Id=?");
+        $stmt = $mysqli->prepare("UPDATE servicios SET Titulo=?, Descripcion=?, Orden=? WHERE Id=?");
         $stmt->bind_param("ssii", $titulo, $desc, $orden, $id);
       }
       if ($stmt->execute()) $msg = 'Servicio actualizado.'; else $err = $mysqli->error;
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     elseif (isset($_POST['action']) && $_POST['action'] === 'delete') {
       $id = intval($_POST['id'] ?? 0);
-      $stmt = $mysqli->prepare("DELETE FROM Servicios WHERE Id = ?");
+      $stmt = $mysqli->prepare("DELETE FROM servicios WHERE Id = ?");
       $stmt->bind_param("i",$id);
       if ($stmt->execute()) $msg = 'Servicio eliminado.'; else $err = $mysqli->error;
       $stmt->close();

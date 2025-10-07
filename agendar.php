@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $insertOk = false;
     $citaId = null;
     $ins = $conexion->prepare(
-      "INSERT INTO Citas (ServicioId, Nombre, Email, Telefono, Mensaje, Estado)
+      "INSERT INTO citas (ServicioId, Nombre, Email, Telefono, Mensaje, Estado)
        VALUES (?, ?, ?, ?, ?, 'pendiente')"
     );
     if ($ins) {

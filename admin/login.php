@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   else {
     $mysqli = new mysqli($db['host'],$db['user'],$db['pass'],$db['name']);
     if ($mysqli->connect_error) die('DB error');
-    $stmt = $mysqli->prepare("SELECT Id, PasswordHash FROM AdminUsers WHERE Username = ? LIMIT 1");
+    $stmt = $mysqli->prepare("SELECT Id, PasswordHash FROM adminusers WHERE Username = ? LIMIT 1");
     $stmt->bind_param("s",$user);
     $stmt->execute();
     $res = $stmt->get_result();
