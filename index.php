@@ -1,4 +1,5 @@
 <?php
+echo ('hola');
 $config = require __DIR__ . '/config.php';
 $dbconf = $config['db'];
 $conexion = new mysqli($dbconf['host'], $dbconf['user'], $dbconf['pass'], $dbconf['name']);
