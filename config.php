@@ -30,4 +30,26 @@ return [
     'allow_fallback' => false,        // evita mail() si falla SMTP (más claro en errores)
   ],
 ];
+// return [
+//   'db' => [
+//     'host' => 'localhost',
+//     'user' => 'root',
+//     'pass' => '',
+//     'name' => 'webfiscal',
+//   ],
+//   'owner_email' => 'contacto@medlex.mx',
+//   // Configuración SMTP para PHPMailer (rellenar con tus datos reales)
+//   'smtp' => [
+//     'enabled' => true,                // true para usar SMTP
+//     'host' => 'smtp.hostinger.com',   // host SMTP típico en Hostinger
+//     'user' => 'yo@cesarmaat.com', // CREA este buzón en hPanel o usa el existente
+//     'pass' => 'Michi2214.',   // reemplaza por la contraseña real del buzón
+//     'port' => 587,                    // 587 (TLS) o 465 (SSL)
+//     'secure' => 'tls',                // 'tls' o 'ssl'
+//     'auth' => true,                   // requerir autenticación
+//     'from_address' => 'yo@cesarmaat.com', // mantener igual que user para evitar rechazos
+//     'from_name' => 'MEDLEX',
+//     'allow_fallback' => false,        // evita mail() si falla SMTP (más claro en errores)
+//   ],
+// ];
 ?>

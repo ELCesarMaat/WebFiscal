@@ -59,4 +59,24 @@ function empresa_redes(): array {
   return is_array($r) ? $r : [];
 }
 
+// Decodifica redes desde JSON en $empresa['Redes'] y expone helper
+if (!isset($empresa_redes)) { $empresa_redes = []; }
+if (!empty($empresa['Redes'])) {
+  $tmp = json_decode($empresa['Redes'], true);
+  if (is_array($tmp)) $empresa_redes = $tmp;
+}
+
+// Helper para obtener redes (opcional filtrar vacías)
+if (!function_exists('empresa_redes')) {
+  function empresa_redes(bool $onlyFilled = true): array {
+    global $empresa_redes;
+    if (!$onlyFilled) return $empresa_redes;
+    $out = [];
+    foreach (($empresa_redes ?? []) as $k => $v) {
+      if (is_string($v) && trim($v) !== '') $out[$k] = $v;
+    }
+    return $out;
+  }
+}
+
 if (!empty($___close_after)) { $___conn->close(); }
