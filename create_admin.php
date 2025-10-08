@@ -1,5 +1,6 @@
 <!-- <?php
 // Uso: ejecutar una vez para crear el primer admin. Borrar o proteger después.
+die('404 not found');
 $config = require __DIR__ . '/config.php';
 $db = $config['db'] ?? null;
 if (!$db) { die('config DB faltante'); }
@@ -14,7 +15,7 @@ $display = 'Administrador';
 
 // insertar
 $hash = password_hash($password, PASSWORD_DEFAULT);
-$stmt = $mysqli->prepare("INSERT INTO AdminUsers (Username, PasswordHash, Email, DisplayName) VALUES (?, ?, ?, ?)");
+$stmt = $mysqli->prepare("INSERT INTO adminusers (Username, PasswordHash, Email, DisplayName) VALUES (?, ?, ?, ?)");
 $stmt->bind_param("ssss",$username,$hash,$email,$display);
 if ($stmt->execute()) {
   echo "Admin creado: $username\n";

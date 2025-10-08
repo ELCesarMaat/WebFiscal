@@ -23,7 +23,7 @@ if ($resEmp && $rowEmp = $resEmp->fetch_assoc()) {
 if ($resEmp) $resEmp->free();
 
 // Helpers
-function empresa_nombre($fallback = 'MEDLEX Despacho Jurídico') {
+function empresa_nombre($fallback = 'Proteccion Juridica') {
   global $empresa; return !empty($empresa['Nombre']) ? $empresa['Nombre'] : $fallback;
 }
 function empresa_logo_full_filename($fallback = 'logofull.png') {
@@ -32,12 +32,12 @@ function empresa_logo_full_filename($fallback = 'logofull.png') {
 function empresa_logo_filename($fallback = 'logo.png') {
   global $empresa; return !empty($empresa['Logo']) ? $empresa['Logo'] : $fallback;
 }
-function empresa_email_admin($fallback = 'contacto@medlex.mx') {
+function empresa_email_admin($fallback = 'contacto@proteccionjuridica.mx') {
   global $empresa; return $empresa['correo_administrador'] ?? ($empresa['Email'] ?? $fallback);
 }
 
 // === Nuevos helpers (faltantes) ===
-function empresa_email($fallback = 'contacto@medlex.mx') {
+function empresa_email($fallback = 'contacto@proteccionjuridica.mx') {
   global $empresa; return !empty($empresa['Email']) ? $empresa['Email'] : $fallback;
 }
 function empresa_telefono($fallback = '') {
